@@ -264,6 +264,7 @@ pub enum OspfLinkStateAdvertisement {
 /// router links advertisements, see Section 12.4.1.
 #[derive(Nom)]
 pub struct OspfRouterLinksAdvertisement {
+    #[Verify(header.ls_type == OspfLinkStateType::RouterLinks)]
     pub header: OspfLinkStateAdvertisementHeader,
     pub flags: u16,
     pub num_links: u16,
@@ -322,6 +323,7 @@ pub struct OspfRouterTOS {
 /// Section 12.4.2.
 #[derive(Nom)]
 pub struct OspfNetworkLinksAdvertisement {
+    #[Verify(header.ls_type == OspfLinkStateType::NetworkLinks)]
     pub header: OspfLinkStateAdvertisementHeader,
     pub network_mask: u32,
     pub attached_routers: Vec<u32>,
@@ -354,6 +356,8 @@ impl OspfNetworkLinksAdvertisement {
 /// and 4 link state advertisements is identical.
 #[derive(Nom)]
 pub struct OspfSummaryLinkAdvertisement {
+    #[Verify(header.ls_type == OspfLinkStateType::SummaryLinkIpNetwork ||
+        header.ls_type == OspfLinkStateType::SummaryLinkAsbr)]
     pub header: OspfLinkStateAdvertisementHeader,
     pub network_mask: u32,
     pub tos_routes: Vec<OspfTosRoute>,
