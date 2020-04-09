@@ -140,12 +140,22 @@ pub struct OspfDatabaseDescriptionPacket {
 pub struct OspfLinkStateRequestPacket {
     #[Verify(header.packet_type == OspfPacketType::LinkStateRequest)]
     pub header: OspfPacketHeader,
-    pub ls_type: u32,
-    pub ls_id: u32,
+    pub requests: Vec<OspfLinkStateRequest>,
+}
+
+#[derive(Debug, Nom)]
+pub struct OspfLinkStateRequest {
+    // XXX should be a OspfLinkStateType, but it is only an u8
+    pub link_state_type: u32,
+    pub link_state_id: u32,
     pub advertising_router: u32,
 }
 
-impl OspfLinkStateRequestPacket {
+impl OspfLinkStateRequest {
+    pub fn link_state_id(&self) -> Ipv4Addr {
+        Ipv4Addr::from(self.link_state_id)
+    }
+
     pub fn advertising_router(&self) -> Ipv4Addr {
         Ipv4Addr::from(self.advertising_router)
     }
@@ -173,7 +183,7 @@ pub struct OspfLinkStateUpdatePacket {
     pub header: OspfPacketHeader,
     pub num_advertisements: u32,
     #[Count = "num_advertisements"]
-    pub advertisements: Vec<OspfLinkStateAdvertisement>,
+    pub lsa: Vec<OspfLinkStateAdvertisement>,
 }
 
 /// The Link State Acknowledgment packet
@@ -200,7 +210,7 @@ pub struct OspfLinkStateUpdatePacket {
 pub struct OspfLinkStateAcknowledgmentPacket {
     #[Verify(header.packet_type == OspfPacketType::LinkStateAcknowledgment)]
     pub header: OspfPacketHeader,
-    pub ls_header: Vec<OspfLinkStateAdvertisementHeader>,
+    pub lsa_headers: Vec<OspfLinkStateAdvertisementHeader>,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Nom)]
@@ -230,8 +240,8 @@ impl display OspfLinkStateType {
 pub struct OspfLinkStateAdvertisementHeader {
     pub ls_age: u16,
     pub options: u8,
-    pub ls_type: OspfLinkStateType,
-    pub ls_id: u32,
+    pub link_state_type: OspfLinkStateType,
+    pub link_state_id: u32,
     pub advertising_router: u32,
     pub ls_seq_number: u32,
     pub ls_checksum: u16,
@@ -295,6 +305,16 @@ pub struct OspfRouterLink {
     pub tos_0_metric: u16,
     #[Count = "num_tos"]
     pub tos_list: Vec<OspfRouterTOS>,
+}
+
+impl OspfRouterLink {
+    pub fn link_id(&self) -> Ipv4Addr {
+        Ipv4Addr::from(self.link_id)
+    }
+
+    pub fn link_data(&self) -> Ipv4Addr {
+        Ipv4Addr::from(self.link_data)
+    }
 }
 
 /// OSPF Router Type Of Service (TOS)
