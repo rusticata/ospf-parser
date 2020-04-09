@@ -1,10 +1,26 @@
 [package]
 name = "ospf-parser"
 version = "0.1.0"
+description = "Parser for the OSPF version 2 protocol"
+license = "MIT/Apache-2.0"
+keywords = ["OSPF","routing","protocol","parser","nom"]
+homepage = "https://github.com/rusticata/ospf-parser"
+repository = "https://github.com/rusticata/ospf-parser.git"
 authors = ["Pierre Chifflier <chifflier@wzdftpd.net>"]
+categories = ["parser-implementations"]
+readme = "README.md"
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+include = [
+  "LICENSE-*",
+  "README.md",
+  ".gitignore",
+  ".travis.yml",
+  "Cargo.toml",
+  "src/*.rs",
+  "tests/*.rs",
+]
+
 
 [dependencies]
 nom = "5.1"
