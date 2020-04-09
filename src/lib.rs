@@ -9,6 +9,11 @@
 //!
 //! [OSPFv2]: https://tools.ietf.org/html/rfc2328 "OSPF Version 2, RFC 2328"
 
+#![deny(/*missing_docs,*/
+        unstable_features,
+        unused_import_braces, unused_qualifications)]
+#![forbid(unsafe_code)]
+
 pub extern crate nom;
 
 mod ospf;
