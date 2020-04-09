@@ -109,10 +109,9 @@ impl OspfHelloPacket {
 pub struct OspfDatabaseDescriptionPacket {
     #[Verify(header.packet_type == OspfPacketType::DatabaseDescription)]
     pub header: OspfPacketHeader,
-    pub reserved0: u8,
-    pub reserved1: u8,
+    pub if_mtu: u16,
     pub options: u8,
-    pub bits: u8,
+    pub flags: u8,
     pub dd_sequence_number: u32,
     pub link_state_advertisement: Vec<OspfLinkStateAdvertisementHeader>,
 }
