@@ -2,6 +2,7 @@ use nom::number::streaming::{be_u16, be_u24, be_u32, be_u64, be_u8};
 use nom::{call, complete, count, do_parse, many0, IResult};
 use nom_derive::Nom;
 use rusticata_macros::newtype_enum;
+use std::net::Ipv4Addr;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Nom)]
 pub struct OspfPacketType(pub u8);
@@ -43,6 +44,12 @@ pub struct OspfPacketHeader {
     pub authentication: u64,
 }
 
+impl OspfPacketHeader {
+    pub fn source_router(&self) -> Ipv4Addr {
+        Ipv4Addr::from(self.router_id)
+    }
+}
+
 /// The Hello packet
 ///
 /// Hello packets are OSPF packet type 1.  These packets are sent
@@ -71,6 +78,20 @@ pub struct OspfHelloPacket {
     pub designated_router: u32,
     pub backup_designated_router: u32,
     pub neighbor_list: Vec<u32>,
+}
+
+impl OspfHelloPacket {
+    pub fn network_mask(&self) -> Ipv4Addr {
+        Ipv4Addr::from(self.network_mask)
+    }
+
+    pub fn designated_router(&self) -> Ipv4Addr {
+        Ipv4Addr::from(self.designated_router)
+    }
+
+    pub fn backup_designated_router(&self) -> Ipv4Addr {
+        Ipv4Addr::from(self.backup_designated_router)
+    }
 }
 
 /// The Database Description packet
@@ -122,6 +143,12 @@ pub struct OspfLinkStateRequestPacket {
     pub ls_type: u32,
     pub ls_id: u32,
     pub advertising_router: u32,
+}
+
+impl OspfLinkStateRequestPacket {
+    pub fn advertising_router(&self) -> Ipv4Addr {
+        Ipv4Addr::from(self.advertising_router)
+    }
 }
 
 /// The Link State Update packet
@@ -211,6 +238,12 @@ pub struct OspfLinkStateAdvertisementHeader {
     pub length: u16,
 }
 
+impl OspfLinkStateAdvertisementHeader {
+    pub fn advertising_router(&self) -> Ipv4Addr {
+        Ipv4Addr::from(self.advertising_router)
+    }
+}
+
 /// Link state advertisements
 pub enum OspfLinkStateAdvertisement {
     RouterLinks(OspfRouterLinksAdvertisement),
@@ -294,6 +327,12 @@ pub struct OspfNetworkLinksAdvertisement {
     pub attached_routers: Vec<u32>,
 }
 
+impl OspfNetworkLinksAdvertisement {
+    pub fn network_mask(&self) -> Ipv4Addr {
+        Ipv4Addr::from(self.network_mask)
+    }
+}
+
 /// Summary link advertisements
 ///
 /// Summary link advertisements are the Type 3 and 4 link state
@@ -320,10 +359,16 @@ pub struct OspfSummaryLinkAdvertisement {
     pub tos_routes: Vec<OspfTosRoute>,
 }
 
+impl OspfSummaryLinkAdvertisement {
+    pub fn network_mask(&self) -> Ipv4Addr {
+        Ipv4Addr::from(self.network_mask)
+    }
+}
+
 #[derive(Nom)]
 pub struct OspfTosRoute {
     pub tos: u8,
-    #[Parse="be_u24"]
+    #[Parse = "be_u24"]
     pub metric: u32,
 }
 
@@ -347,16 +392,29 @@ pub struct OspfTosRoute {
 /// (0.0.0.0) and the Network Mask is set to 0.0.0.0.
 #[derive(Nom)]
 pub struct OspfASExternalLinkAdvertisement {
+    #[Verify(header.ls_type == OspfLinkStateType::ASExternalLink)]
     pub header: OspfLinkStateAdvertisementHeader,
     pub network_mask: u32,
     pub tos_list: Vec<OspfExternalTosRoute>,
 }
 
+impl OspfASExternalLinkAdvertisement {
+    pub fn network_mask(&self) -> Ipv4Addr {
+        Ipv4Addr::from(self.network_mask)
+    }
+}
+
 #[derive(Nom)]
 pub struct OspfExternalTosRoute {
     pub tos: u8,
-    #[Parse="be_u24"]
+    #[Parse = "be_u24"]
     pub metric: u32,
     pub forwarding_address: u32,
     pub external_route_tag: u32,
+}
+
+impl OspfExternalTosRoute {
+    pub fn forwarding_address(&self) -> Ipv4Addr {
+        Ipv4Addr::from(self.forwarding_address)
+    }
 }
