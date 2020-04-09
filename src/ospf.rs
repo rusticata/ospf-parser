@@ -18,6 +18,7 @@ impl display OspfPacketType {
 }
 
 /// An OSPF version 2 packet
+#[derive(Debug)]
 pub enum OspfPacket {
     Hello(OspfHelloPacket),
     DatabaseDescription(OspfDatabaseDescriptionPacket),
@@ -32,7 +33,7 @@ pub enum OspfPacket {
 /// contains all the necessary information to determine whether the
 /// packet should be accepted for further processing.  This
 /// determination is described in Section 8.2 of the specification.
-#[derive(Nom)]
+#[derive(Debug, Nom)]
 pub struct OspfPacketHeader {
     pub version: u8,
     pub packet_type: OspfPacketType,
@@ -66,7 +67,7 @@ impl OspfPacketHeader {
 /// explanation of the receive processing for Hello packets is presented
 /// in Section 10.5.  The sending of Hello packets is covered in Section
 /// 9.5.
-#[derive(Nom)]
+#[derive(Debug, Nom)]
 pub struct OspfHelloPacket {
     #[Verify(header.packet_type == OspfPacketType::Hello)]
     pub header: OspfPacketHeader,
@@ -105,7 +106,7 @@ impl OspfHelloPacket {
 /// (polls) which are acknowledged by Database Description packets sent
 /// by the slave (responses).  The responses are linked to the polls via
 /// the packets' DD sequence numbers.
-#[derive(Nom)]
+#[derive(Debug, Nom)]
 pub struct OspfDatabaseDescriptionPacket {
     #[Verify(header.packet_type == OspfPacketType::DatabaseDescription)]
     pub header: OspfPacketHeader,
@@ -135,7 +136,7 @@ pub struct OspfDatabaseDescriptionPacket {
 /// The sending of Link State Request packets is documented in Section
 /// 10.9.  The reception of Link State Request packets is documented in
 /// Section 10.7.
-#[derive(Nom)]
+#[derive(Debug, Nom)]
 pub struct OspfLinkStateRequestPacket {
     #[Verify(header.packet_type == OspfPacketType::LinkStateRequest)]
     pub header: OspfPacketHeader,
@@ -166,7 +167,7 @@ impl OspfLinkStateRequestPacket {
 /// always carried by unicast Link State Update packets.  For more
 /// information on the reliable flooding of link state advertisements,
 /// consult Section 13.
-#[derive(Nom)]
+#[derive(Debug, Nom)]
 pub struct OspfLinkStateUpdatePacket {
     #[Verify(header.packet_type == OspfPacketType::LinkStateUpdate)]
     pub header: OspfPacketHeader,
@@ -195,7 +196,7 @@ pub struct OspfLinkStateUpdatePacket {
 /// The format of this packet is similar to that of the Data Description
 /// packet.  The body of both packets is simply a list of link state
 /// advertisement headers.
-#[derive(Nom)]
+#[derive(Debug, Nom)]
 pub struct OspfLinkStateAcknowledgmentPacket {
     #[Verify(header.packet_type == OspfPacketType::LinkStateAcknowledgment)]
     pub header: OspfPacketHeader,
@@ -225,7 +226,7 @@ impl display OspfLinkStateType {
 /// which instance is more recent.  This is accomplished by examining
 /// the LS age, LS sequence number and LS checksum fields that are also
 /// contained in the link state advertisement header.
-#[derive(Nom)]
+#[derive(Debug, Nom)]
 pub struct OspfLinkStateAdvertisementHeader {
     pub ls_age: u16,
     pub options: u8,
@@ -244,6 +245,7 @@ impl OspfLinkStateAdvertisementHeader {
 }
 
 /// Link state advertisements
+#[derive(Debug)]
 pub enum OspfLinkStateAdvertisement {
     RouterLinks(OspfRouterLinksAdvertisement),
     NetworkLinks(OspfNetworkLinksAdvertisement),
@@ -261,7 +263,7 @@ pub enum OspfLinkStateAdvertisement {
 /// router's links to the area must be described in a single router
 /// links advertisement.  For details concerning the construction of
 /// router links advertisements, see Section 12.4.1.
-#[derive(Nom)]
+#[derive(Debug, Nom)]
 pub struct OspfRouterLinksAdvertisement {
     #[Verify(header.ls_type == OspfLinkStateType::RouterLinks)]
     pub header: OspfLinkStateAdvertisementHeader,
@@ -284,7 +286,7 @@ impl display OspfRouterLinkType {
 }
 
 /// OSPF router link (i.e., interface)
-#[derive(Nom)]
+#[derive(Debug, Nom)]
 pub struct OspfRouterLink {
     pub link_id: u32,
     pub link_data: u32,
@@ -296,7 +298,7 @@ pub struct OspfRouterLink {
 }
 
 /// OSPF Router Type Of Service (TOS)
-#[derive(Nom)]
+#[derive(Debug, Nom)]
 pub struct OspfRouterTOS {
     pub tos: u8,
     pub reserved: u8,
@@ -320,7 +322,7 @@ pub struct OspfRouterTOS {
 /// not be specified in the network links advertisement.  For details
 /// concerning the construction of network links advertisements, see
 /// Section 12.4.2.
-#[derive(Nom)]
+#[derive(Debug, Nom)]
 pub struct OspfNetworkLinksAdvertisement {
     #[Verify(header.ls_type == OspfLinkStateType::NetworkLinks)]
     pub header: OspfLinkStateAdvertisementHeader,
@@ -353,7 +355,7 @@ impl OspfNetworkLinksAdvertisement {
 /// advertise the location of each ASBR, consult Section 16.4.)  Other
 /// than the difference in the Link State ID field, the format of Type 3
 /// and 4 link state advertisements is identical.
-#[derive(Nom)]
+#[derive(Debug, Nom)]
 pub struct OspfSummaryLinkAdvertisement {
     #[Verify(header.ls_type == OspfLinkStateType::SummaryLinkIpNetwork ||
         header.ls_type == OspfLinkStateType::SummaryLinkAsbr)]
@@ -368,7 +370,7 @@ impl OspfSummaryLinkAdvertisement {
     }
 }
 
-#[derive(Nom)]
+#[derive(Debug, Nom)]
 pub struct OspfTosRoute {
     pub tos: u8,
     #[Parse = "be_u24"]
@@ -393,7 +395,7 @@ pub struct OspfTosRoute {
 /// specific route exists to the destination.  When describing a default
 /// route, the Link State ID is always set to DefaultDestination
 /// (0.0.0.0) and the Network Mask is set to 0.0.0.0.
-#[derive(Nom)]
+#[derive(Debug, Nom)]
 pub struct OspfASExternalLinkAdvertisement {
     #[Verify(header.ls_type == OspfLinkStateType::ASExternalLink)]
     pub header: OspfLinkStateAdvertisementHeader,
@@ -407,7 +409,7 @@ impl OspfASExternalLinkAdvertisement {
     }
 }
 
-#[derive(Nom)]
+#[derive(Debug, Nom)]
 pub struct OspfExternalTosRoute {
     pub tos: u8,
     #[Parse = "be_u24"]
