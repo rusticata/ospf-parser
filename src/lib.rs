@@ -6,9 +6,8 @@
 //!
 //! The code is available on [Github](https://github.com/rusticata/ospf-parser)
 //! and is part of the [Rusticata](https://github.com/rusticata) project.
-//! 
+//!
 //! [OSPFv2]: https://tools.ietf.org/html/rfc2328 "OSPF Version 2, RFC 2328"
-
 
 pub extern crate nom;
 
