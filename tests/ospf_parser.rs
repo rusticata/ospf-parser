@@ -205,3 +205,43 @@ pub fn test_ls_ack() {
         panic!("wrong packet type");
     }
 }
+
+#[test]
+pub fn test_ls_update_multiple_lsa() {
+    // packet 26 of "ospf.cap" (wireshark samples)
+    const OSPF_LSA: &[u8] = &hex!(
+        "
+02 04 01 24 c0 a8 aa 03 00 00 00 01 36 6b 00 00
+00 00 00 00 00 00 00 00 00 00 00 07 00 02 02 01
+c0 a8 aa 03 c0 a8 aa 03 80 00 00 01 3a 9c 00 30
+02 00 00 02 c0 a8 aa 00 ff ff ff 00 03 00 00 0a
+c0 a8 aa 00 ff ff ff 00 03 00 00 0a 00 03 02 05
+50 d4 10 00 c0 a8 aa 02 80 00 00 01 2a 49 00 24
+ff ff ff ff 80 00 00 14 00 00 00 00 00 00 00 00
+00 03 02 05 94 79 ab 00 c0 a8 aa 02 80 00 00 01
+34 a5 00 24 ff ff ff 00 80 00 00 14 c0 a8 aa 01
+00 00 00 00 00 03 02 05 c0 82 78 00 c0 a8 aa 02
+80 00 00 01 d3 19 00 24 ff ff ff 00 80 00 00 14
+00 00 00 00 00 00 00 00 00 03 02 05 c0 a8 00 00
+c0 a8 aa 02 80 00 00 01 37 08 00 24 ff ff ff 00
+80 00 00 14 00 00 00 00 00 00 00 00 00 03 02 05
+c0 a8 01 00 c0 a8 aa 02 80 00 00 01 2c 12 00 24
+ff ff ff 00 80 00 00 14 00 00 00 00 00 00 00 00
+00 03 02 05 c0 a8 ac 00 c0 a8 aa 02 80 00 00 01
+33 41 00 24 ff ff ff 00 80 00 00 14 c0 a8 aa 0a
+00 00 00 00
+        "
+    );
+
+    let (rem, res) = parse_ospf_packet(OSPF_LSA).expect("parsing failed");
+    // println!("res:{:#?}", res);
+    assert!(rem.is_empty());
+    if let OspfPacket::LinkStateUpdate(pkt) = res {
+        assert_eq!(pkt.header.version, 2);
+        assert_eq!(pkt.header.packet_type, OspfPacketType::LinkStateUpdate);
+        assert_eq!(pkt.header.source_router(), Ipv4Addr::new(192, 168, 170, 3));
+        assert_eq!(pkt.lsa.len(), 7);
+    } else {
+        panic!("wrong packet type");
+    }
+}

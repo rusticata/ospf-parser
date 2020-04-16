@@ -1,6 +1,7 @@
 use crate::ospf::*;
-use nom::combinator::{map, peek};
+use nom::combinator::{complete, map, peek};
 use nom::error::{make_error, ErrorKind};
+use nom::multi::many0;
 use nom::number::streaming::{be_u16, be_u32};
 pub use nom::IResult;
 
@@ -85,4 +86,33 @@ impl OspfLinkStateAdvertisement {
             _ => Err(nom::Err::Error(make_error(input, ErrorKind::Tag))),
         }
     }
+}
+
+pub(crate) fn parse_ospf_external_tos_routes(
+    input: &[u8],
+    packet_length: u16,
+) -> IResult<&[u8], Vec<OspfExternalTosRoute>> {
+    if packet_length == 36 {
+        return Ok((input, Vec::new()));
+    }
+    // 36 is the offset of the first external TOS Route
+    if input.len() < 36 || packet_length as usize > input.len() {
+        return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
+    }
+    let (data_routes, rem) = input.split_at(36 - packet_length as usize);
+    let (_, routes) = many0(complete(OspfExternalTosRoute::parse))(data_routes)?;
+    Ok((rem, routes))
+}
+
+pub(crate) fn parse_ospf_tos_routes(
+    input: &[u8],
+    packet_length: u16,
+) -> IResult<&[u8], Vec<OspfTosRoute>> {
+    // 28 is the offset of the first TOS Route
+    if input.len() < 28 || packet_length as usize > input.len() {
+        return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
+    }
+    let (data_routes, rem) = input.split_at(28 - packet_length as usize);
+    let (_, routes) = many0(complete(OspfTosRoute::parse))(data_routes)?;
+    Ok((rem, routes))
 }
