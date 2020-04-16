@@ -74,7 +74,7 @@ pub struct OspfHelloPacket {
     pub network_mask: u32,
     pub hello_interval: u16,
     pub options: u8,
-    pub rtr_pri: u8,
+    pub router_priority: u8,
     pub router_dead_interval: u32,
     pub designated_router: u32,
     pub backup_designated_router: u32,
