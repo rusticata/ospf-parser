@@ -250,6 +250,10 @@ pub struct OspfLinkStateAdvertisementHeader {
 }
 
 impl OspfLinkStateAdvertisementHeader {
+    pub fn link_state_id(&self) -> Ipv4Addr {
+        Ipv4Addr::from(self.link_state_id)
+    }
+
     pub fn advertising_router(&self) -> Ipv4Addr {
         Ipv4Addr::from(self.advertising_router)
     }
@@ -434,6 +438,9 @@ pub struct OspfASExternalLinkAdvertisement {
 }
 
 impl OspfASExternalLinkAdvertisement {
+    pub fn forwarding_address(&self) -> Ipv4Addr {
+        Ipv4Addr::from(self.forwarding_address)
+    }
     pub fn network_mask(&self) -> Ipv4Addr {
         Ipv4Addr::from(self.network_mask)
     }
