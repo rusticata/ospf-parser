@@ -363,6 +363,10 @@ impl OspfNetworkLinksAdvertisement {
     pub fn network_mask(&self) -> Ipv4Addr {
         Ipv4Addr::from(self.network_mask)
     }
+
+    pub fn iter_attached_routers(&self) -> impl Iterator<Item = Ipv4Addr> + '_ {
+        self.attached_routers.iter().map(|&u| Ipv4Addr::from(u))
+    }
 }
 
 /// Summary link advertisements
