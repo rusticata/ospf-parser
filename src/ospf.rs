@@ -226,6 +226,7 @@ impl display OspfLinkStateType {
     SummaryLinkIpNetwork = 3,
     SummaryLinkAsbr = 4,
     ASExternalLink = 5,
+    NSSAASExternal = 7,
 }
 }
 
@@ -269,6 +270,7 @@ pub enum OspfLinkStateAdvertisement {
     SummaryLinkIpNetwork(OspfSummaryLinkAdvertisement),
     SummaryLinkAsbr(OspfSummaryLinkAdvertisement),
     ASExternalLink(OspfASExternalLinkAdvertisement),
+    NSSAASExternal(OspfNSSAExternalLinkAdvertisement),
 }
 
 /// Router links advertisements
@@ -469,5 +471,30 @@ pub struct OspfExternalTosRoute {
 impl OspfExternalTosRoute {
     pub fn forwarding_address(&self) -> Ipv4Addr {
         Ipv4Addr::from(self.forwarding_address)
+    }
+}
+
+/// NSSA AS-External LSA (type 7, rfc1587, rfc3101)
+#[derive(Debug, Nom)]
+pub struct OspfNSSAExternalLinkAdvertisement {
+    #[Verify(header.ls_type == OspfLinkStateType::ASExternalLink)]
+    pub header: OspfLinkStateAdvertisementHeader,
+    pub network_mask: u32,
+    pub external_and_tos: u8,
+    #[Parse = "be_u24"]
+    pub metric: u32,
+    pub forwarding_address: u32,
+    pub external_route_tag: u32,
+    // limit parsing to (length-xxx) bytes
+    #[Parse = "call!(parse_ospf_external_tos_routes, header.length)"]
+    pub tos_list: Vec<OspfExternalTosRoute>,
+}
+
+impl OspfNSSAExternalLinkAdvertisement {
+    pub fn forwarding_address(&self) -> Ipv4Addr {
+        Ipv4Addr::from(self.forwarding_address)
+    }
+    pub fn network_mask(&self) -> Ipv4Addr {
+        Ipv4Addr::from(self.network_mask)
     }
 }

@@ -268,3 +268,28 @@ pub fn test_lsa_summary() {
         panic!("wrong lsa type");
     }
 }
+
+#[test]
+pub fn test_lsa_type7() {
+    // packet 11 of "OSPF_type7_LSA.cap" (packetlife)
+    const OSPF_LSA: &[u8] = &hex!(
+        "
+00 66 28 07 ac 10 00 00 02 02 02 02 80 00 00 01
+63 ac 00 24 ff ff ff fc 80 00 00 64 c0 a8 0a 01
+00 00 00 00
+        "
+    );
+
+    let (rem, res) = OspfLinkStateAdvertisement::parse(OSPF_LSA).expect("parsing failed");
+    // println!("res:{:#?}", res);
+    assert!(rem.is_empty());
+    if let OspfLinkStateAdvertisement::NSSAASExternal(lsa) = res {
+        assert_eq!(lsa.header.link_state_id(), Ipv4Addr::new(172, 16, 0, 0));
+        assert_eq!(lsa.header.advertising_router(), Ipv4Addr::new(2, 2, 2, 2));
+        assert_eq!(lsa.metric, 100);
+        assert_eq!(lsa.forwarding_address(), Ipv4Addr::new(192, 168, 10, 1));
+        assert_eq!(lsa.tos_list.len(), 0);
+    } else {
+        panic!("wrong lsa type");
+    }
+}

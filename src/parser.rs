@@ -84,6 +84,10 @@ impl OspfLinkStateAdvertisement {
                 OspfASExternalLinkAdvertisement::parse,
                 OspfLinkStateAdvertisement::ASExternalLink,
             )(input),
+            OspfLinkStateType::NSSAASExternal => map(
+                OspfNSSAExternalLinkAdvertisement::parse,
+                OspfLinkStateAdvertisement::NSSAASExternal,
+            )(input),
             _ => Err(nom::Err::Error(make_error(input, ErrorKind::Tag))),
         }
     }
