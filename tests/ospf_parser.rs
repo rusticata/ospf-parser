@@ -259,11 +259,11 @@ pub fn test_lsa_summary() {
     let (rem, res) = OspfLinkStateAdvertisement::parse(OSPF_LSA).expect("parsing failed");
     // println!("res:{:#?}", res);
     assert!(rem.is_empty());
-    if let OspfLinkStateAdvertisement::SummaryLinkIpNetwork(pkt) = res {
-        // assert_eq!(pkt.header.version, 2);
-        // assert_eq!(pkt.header.packet_type, OspfPacketType::LinkStateUpdate);
-        // assert_eq!(pkt.header.source_router(), Ipv4Addr::new(192, 168, 170, 3));
-        // assert_eq!(pkt.lsa.len(), 7);
+    if let OspfLinkStateAdvertisement::SummaryLinkIpNetwork(lsa) = res {
+        assert_eq!(lsa.header.link_state_id(), Ipv4Addr::new(192, 168, 10, 0));
+        assert_eq!(lsa.header.advertising_router(), Ipv4Addr::new(4, 4, 4, 4));
+        assert_eq!(lsa.metric, 30);
+        assert_eq!(lsa.tos_routes.len(), 0);
     } else {
         panic!("wrong lsa type");
     }

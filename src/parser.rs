@@ -97,7 +97,7 @@ pub(crate) fn parse_ospf_attached_routers(
         return Ok((input, Vec::new()));
     }
     // 24 is the offset of the first attached router
-    if packet_length < 24 || input.len() < 24 || packet_length as usize > input.len() {
+    if packet_length < 24 || packet_length as usize - 24 > input.len() {
         return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
     }
     let (data, rem) = input.split_at(packet_length as usize - 24);
@@ -113,7 +113,7 @@ pub(crate) fn parse_ospf_external_tos_routes(
         return Ok((input, Vec::new()));
     }
     // 36 is the offset of the first external TOS Route
-    if packet_length < 36 || input.len() < 36 || packet_length as usize > input.len() {
+    if packet_length < 36 || packet_length as usize - 36 > input.len() {
         return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
     }
     let (data_routes, rem) = input.split_at(packet_length as usize - 36);
@@ -129,7 +129,7 @@ pub(crate) fn parse_ospf_tos_routes(
         return Ok((input, Vec::new()));
     }
     // 28 is the offset of the first TOS Route
-    if packet_length < 28 || input.len() < 28 || packet_length as usize > input.len() {
+    if packet_length < 28 || packet_length as usize - 28 > input.len() {
         return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
     }
     let (data_routes, rem) = input.split_at(packet_length as usize - 28);
