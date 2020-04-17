@@ -245,3 +245,26 @@ ff ff ff 00 80 00 00 14 00 00 00 00 00 00 00 00
         panic!("wrong packet type");
     }
 }
+
+#[test]
+pub fn test_lsa_summary() {
+    // packet 12 of "OSPF_LSA_types.cap" (packetlife)
+    const OSPF_LSA: &[u8] = &hex!(
+        "
+00 0b 22 03 c0 a8 0a 00 04 04 04 04 80 00 00 01
+1e 7d 00 1c ff ff ff 00 00 00 00 1e
+        "
+    );
+
+    let (rem, res) = OspfLinkStateAdvertisement::parse(OSPF_LSA).expect("parsing failed");
+    // println!("res:{:#?}", res);
+    assert!(rem.is_empty());
+    if let OspfLinkStateAdvertisement::SummaryLinkIpNetwork(pkt) = res {
+        // assert_eq!(pkt.header.version, 2);
+        // assert_eq!(pkt.header.packet_type, OspfPacketType::LinkStateUpdate);
+        // assert_eq!(pkt.header.source_router(), Ipv4Addr::new(192, 168, 170, 3));
+        // assert_eq!(pkt.lsa.len(), 7);
+    } else {
+        panic!("wrong lsa type");
+    }
+}

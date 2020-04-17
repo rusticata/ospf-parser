@@ -2,6 +2,7 @@ use crate::ospf::*;
 use nom::combinator::{complete, map, peek};
 use nom::error::{make_error, ErrorKind};
 use nom::multi::many0;
+use nom::number::complete::be_u32 as be_u32_complete;
 use nom::number::streaming::{be_u16, be_u32};
 pub use nom::IResult;
 
@@ -88,6 +89,22 @@ impl OspfLinkStateAdvertisement {
     }
 }
 
+pub(crate) fn parse_ospf_attached_routers(
+    input: &[u8],
+    packet_length: u16,
+) -> IResult<&[u8], Vec<u32>> {
+    if packet_length == 24 {
+        return Ok((input, Vec::new()));
+    }
+    // 24 is the offset of the first attached router
+    if packet_length < 24 || input.len() < 24 || packet_length as usize > input.len() {
+        return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
+    }
+    let (data, rem) = input.split_at(packet_length as usize - 24);
+    let (_, routers) = many0(be_u32_complete)(data)?;
+    Ok((rem, routers))
+}
+
 pub(crate) fn parse_ospf_external_tos_routes(
     input: &[u8],
     packet_length: u16,
@@ -96,10 +113,10 @@ pub(crate) fn parse_ospf_external_tos_routes(
         return Ok((input, Vec::new()));
     }
     // 36 is the offset of the first external TOS Route
-    if input.len() < 36 || packet_length as usize > input.len() {
+    if packet_length < 36 || input.len() < 36 || packet_length as usize > input.len() {
         return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
     }
-    let (data_routes, rem) = input.split_at(36 - packet_length as usize);
+    let (data_routes, rem) = input.split_at(packet_length as usize - 36);
     let (_, routes) = many0(complete(OspfExternalTosRoute::parse))(data_routes)?;
     Ok((rem, routes))
 }
@@ -108,11 +125,14 @@ pub(crate) fn parse_ospf_tos_routes(
     input: &[u8],
     packet_length: u16,
 ) -> IResult<&[u8], Vec<OspfTosRoute>> {
+    if packet_length == 28 {
+        return Ok((input, Vec::new()));
+    }
     // 28 is the offset of the first TOS Route
-    if input.len() < 28 || packet_length as usize > input.len() {
+    if packet_length < 28 || input.len() < 28 || packet_length as usize > input.len() {
         return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
     }
-    let (data_routes, rem) = input.split_at(28 - packet_length as usize);
+    let (data_routes, rem) = input.split_at(packet_length as usize - 28);
     let (_, routes) = many0(complete(OspfTosRoute::parse))(data_routes)?;
     Ok((rem, routes))
 }

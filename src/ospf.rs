@@ -1,4 +1,6 @@
-use crate::parser::{parse_ospf_external_tos_routes, parse_ospf_tos_routes};
+use crate::parser::{
+    parse_ospf_attached_routers, parse_ospf_external_tos_routes, parse_ospf_tos_routes,
+};
 use nom::number::streaming::{be_u16, be_u24, be_u32, be_u64, be_u8};
 use nom::{call, complete, count, do_parse, many0, IResult};
 use nom_derive::Nom;
@@ -352,6 +354,8 @@ pub struct OspfNetworkLinksAdvertisement {
     #[Verify(header.ls_type == OspfLinkStateType::NetworkLinks)]
     pub header: OspfLinkStateAdvertisementHeader,
     pub network_mask: u32,
+    // limit parsing to (length-xxx) bytes
+    #[Parse = "call!(parse_ospf_attached_routers, header.length)"]
     pub attached_routers: Vec<u32>,
 }
 
@@ -386,7 +390,10 @@ pub struct OspfSummaryLinkAdvertisement {
         header.ls_type == OspfLinkStateType::SummaryLinkAsbr)]
     pub header: OspfLinkStateAdvertisementHeader,
     pub network_mask: u32,
-    // parsing should be limited to (length-xxx) bytes
+    pub tos: u8,
+    #[Parse = "be_u24"]
+    pub metric: u32,
+    // limit parsing to (length-xxx) bytes
     #[Parse = "call!(parse_ospf_tos_routes, header.length)"]
     pub tos_routes: Vec<OspfTosRoute>,
 }
