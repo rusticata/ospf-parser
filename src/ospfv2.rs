@@ -1,6 +1,4 @@
-use crate::parser::{
-    parse_ospf_attached_routers, parse_ospf_external_tos_routes, parse_ospf_tos_routes,
-};
+use crate::parser::{parse_ospf_external_tos_routes, parse_ospf_tos_routes, parse_ospf_vec_u32};
 use nom::number::streaming::{be_u16, be_u24, be_u32, be_u64, be_u8};
 use nom::{call, complete, count, do_parse, many0, IResult};
 use nom_derive::Nom;
@@ -22,7 +20,7 @@ impl display OspfPacketType {
 
 /// An OSPF version 2 packet
 #[derive(Debug)]
-pub enum OspfPacket {
+pub enum Ospfv2Packet {
     Hello(OspfHelloPacket),
     DatabaseDescription(OspfDatabaseDescriptionPacket),
     LinkStateRequest(OspfLinkStateRequestPacket),
@@ -37,7 +35,8 @@ pub enum OspfPacket {
 /// packet should be accepted for further processing.  This
 /// determination is described in Section 8.2 of the specification.
 #[derive(Debug, Nom)]
-pub struct OspfPacketHeader {
+pub struct Ospfv2PacketHeader {
+    #[Verify(version == 2)]
     pub version: u8,
     pub packet_type: OspfPacketType,
     pub packet_length: u16,
@@ -48,7 +47,7 @@ pub struct OspfPacketHeader {
     pub authentication: u64,
 }
 
-impl OspfPacketHeader {
+impl Ospfv2PacketHeader {
     pub fn source_router(&self) -> Ipv4Addr {
         Ipv4Addr::from(self.router_id)
     }
@@ -73,7 +72,7 @@ impl OspfPacketHeader {
 #[derive(Debug, Nom)]
 pub struct OspfHelloPacket {
     #[Verify(header.packet_type == OspfPacketType::Hello)]
-    pub header: OspfPacketHeader,
+    pub header: Ospfv2PacketHeader,
     pub network_mask: u32,
     pub hello_interval: u16,
     pub options: u8,
@@ -81,6 +80,8 @@ pub struct OspfHelloPacket {
     pub router_dead_interval: u32,
     pub designated_router: u32,
     pub backup_designated_router: u32,
+    // limit parsing to (length-xxx) bytes
+    #[Parse = "call!(parse_ospf_vec_u32, header.packet_length, 44)"]
     pub neighbor_list: Vec<u32>,
 }
 
@@ -112,12 +113,12 @@ impl OspfHelloPacket {
 #[derive(Debug, Nom)]
 pub struct OspfDatabaseDescriptionPacket {
     #[Verify(header.packet_type == OspfPacketType::DatabaseDescription)]
-    pub header: OspfPacketHeader,
+    pub header: Ospfv2PacketHeader,
     pub if_mtu: u16,
     pub options: u8,
     pub flags: u8,
     pub dd_sequence_number: u32,
-    pub link_state_advertisement: Vec<OspfLinkStateAdvertisementHeader>,
+    pub lsa_headers: Vec<OspfLinkStateAdvertisementHeader>,
 }
 
 /// The Link State Request packet
@@ -142,7 +143,7 @@ pub struct OspfDatabaseDescriptionPacket {
 #[derive(Debug, Nom)]
 pub struct OspfLinkStateRequestPacket {
     #[Verify(header.packet_type == OspfPacketType::LinkStateRequest)]
-    pub header: OspfPacketHeader,
+    pub header: Ospfv2PacketHeader,
     pub requests: Vec<OspfLinkStateRequest>,
 }
 
@@ -183,7 +184,7 @@ impl OspfLinkStateRequest {
 #[derive(Debug, Nom)]
 pub struct OspfLinkStateUpdatePacket {
     #[Verify(header.packet_type == OspfPacketType::LinkStateUpdate)]
-    pub header: OspfPacketHeader,
+    pub header: Ospfv2PacketHeader,
     pub num_advertisements: u32,
     #[Count = "num_advertisements"]
     pub lsa: Vec<OspfLinkStateAdvertisement>,
@@ -212,7 +213,7 @@ pub struct OspfLinkStateUpdatePacket {
 #[derive(Debug, Nom)]
 pub struct OspfLinkStateAcknowledgmentPacket {
     #[Verify(header.packet_type == OspfPacketType::LinkStateAcknowledgment)]
-    pub header: OspfPacketHeader,
+    pub header: Ospfv2PacketHeader,
     pub lsa_headers: Vec<OspfLinkStateAdvertisementHeader>,
 }
 
@@ -357,7 +358,7 @@ pub struct OspfNetworkLinksAdvertisement {
     pub header: OspfLinkStateAdvertisementHeader,
     pub network_mask: u32,
     // limit parsing to (length-xxx) bytes
-    #[Parse = "call!(parse_ospf_attached_routers, header.length)"]
+    #[Parse = "call!(parse_ospf_vec_u32, header.length, 24)"]
     pub attached_routers: Vec<u32>,
 }
 

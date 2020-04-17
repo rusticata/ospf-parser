@@ -1,4 +1,5 @@
-use crate::ospf::*;
+use crate::ospfv2::*;
+use crate::ospfv3::*;
 use nom::combinator::{complete, map, peek};
 use nom::error::{make_error, ErrorKind};
 use nom::multi::many0;
@@ -6,7 +7,7 @@ use nom::number::complete::be_u32 as be_u32_complete;
 use nom::number::streaming::{be_u16, be_u32};
 pub use nom::IResult;
 
-pub fn parse_ospf_packet(input: &[u8]) -> IResult<&[u8], OspfPacket> {
+pub fn parse_ospfv2_packet(input: &[u8]) -> IResult<&[u8], Ospfv2Packet> {
     let (_, word) = peek(be_u16)(input)?;
     let b0 = (word >> 8) as u8;
     let b1 = (word & 0xff) as u8;
@@ -14,50 +15,75 @@ pub fn parse_ospf_packet(input: &[u8]) -> IResult<&[u8], OspfPacket> {
         return Err(nom::Err::Error(make_error(input, ErrorKind::Tag)));
     }
     match OspfPacketType(b1) {
-        OspfPacketType::Hello => map(OspfHelloPacket::parse, OspfPacket::Hello)(input),
+        OspfPacketType::Hello => map(OspfHelloPacket::parse, Ospfv2Packet::Hello)(input),
         OspfPacketType::DatabaseDescription => map(
             OspfDatabaseDescriptionPacket::parse,
-            OspfPacket::DatabaseDescription,
+            Ospfv2Packet::DatabaseDescription,
         )(input),
         OspfPacketType::LinkStateRequest => map(
             OspfLinkStateRequestPacket::parse,
-            OspfPacket::LinkStateRequest,
+            Ospfv2Packet::LinkStateRequest,
         )(input),
         OspfPacketType::LinkStateUpdate => map(
             OspfLinkStateUpdatePacket::parse,
-            OspfPacket::LinkStateUpdate,
+            Ospfv2Packet::LinkStateUpdate,
         )(input),
         OspfPacketType::LinkStateAcknowledgment => map(
             OspfLinkStateAcknowledgmentPacket::parse,
-            OspfPacket::LinkStateAcknowledgment,
+            Ospfv2Packet::LinkStateAcknowledgment,
         )(input),
         _ => Err(nom::Err::Error(make_error(input, ErrorKind::Tag))),
     }
 }
 
-pub fn parse_ospf_packet_header(input: &[u8]) -> IResult<&[u8], OspfPacketHeader> {
-    OspfPacketHeader::parse(input)
+pub fn parse_ospfv3_packet(input: &[u8]) -> IResult<&[u8], Ospfv3Packet> {
+    let (_, word) = peek(be_u16)(input)?;
+    let b0 = (word >> 8) as u8;
+    let b1 = (word & 0xff) as u8;
+    if b0 != 3 {
+        return Err(nom::Err::Error(make_error(input, ErrorKind::Tag)));
+    }
+    match OspfPacketType(b1) {
+        OspfPacketType::Hello => map(OspfHellov3Packet::parse, Ospfv3Packet::Hello)(input),
+        OspfPacketType::DatabaseDescription => map(
+            Ospfv3DatabaseDescriptionPacket::parse,
+            Ospfv3Packet::DatabaseDescription,
+        )(input),
+        OspfPacketType::LinkStateRequest => map(
+            Ospfv3LinkStateRequestPacket::parse,
+            Ospfv3Packet::LinkStateRequest,
+        )(input),
+        OspfPacketType::LinkStateUpdate => map(
+            Ospfv3LinkStateUpdatePacket::parse,
+            Ospfv3Packet::LinkStateUpdate,
+        )(input),
+        OspfPacketType::LinkStateAcknowledgment => map(
+            Ospfv3LinkStateAcknowledgmentPacket::parse,
+            Ospfv3Packet::LinkStateAcknowledgment,
+        )(input),
+        _ => Err(nom::Err::Error(make_error(input, ErrorKind::Tag))),
+    }
 }
 
-pub fn parse_ospf_hello_packet(input: &[u8]) -> IResult<&[u8], OspfHelloPacket> {
+pub fn parse_ospfv2_packet_header(input: &[u8]) -> IResult<&[u8], Ospfv2PacketHeader> {
+    Ospfv2PacketHeader::parse(input)
+}
+
+pub fn parse_ospfv2_hello_packet(input: &[u8]) -> IResult<&[u8], OspfHelloPacket> {
     OspfHelloPacket::parse(input)
 }
 
-pub fn parse_ospf_database_description_packet(
+pub fn parse_ospfv2_database_description_packet(
     input: &[u8],
 ) -> IResult<&[u8], OspfDatabaseDescriptionPacket> {
     OspfDatabaseDescriptionPacket::parse(input)
 }
 
-pub fn parse_ospf_link_state_request_packet(
+pub fn parse_ospfv2_link_state_request_packet(
     input: &[u8],
 ) -> IResult<&[u8], OspfLinkStateRequestPacket> {
     OspfLinkStateRequestPacket::parse(input)
 }
-
-// pub(crate) fn parse_ospf_count_lsa(input: &[u8], count: u32) -> IResult<&[u8], Vec<OspfRouterLinksAdvertisement>> {
-
-// }
 
 impl OspfLinkStateAdvertisement {
     pub fn parse(input: &[u8]) -> IResult<&[u8], OspfLinkStateAdvertisement> {
@@ -93,18 +119,58 @@ impl OspfLinkStateAdvertisement {
     }
 }
 
-pub(crate) fn parse_ospf_attached_routers(
+impl Ospfv3LinkStateAdvertisement {
+    pub fn parse(input: &[u8]) -> IResult<&[u8], Ospfv3LinkStateAdvertisement> {
+        let (_, word) = peek(be_u32)(input)?;
+        let ls_type = (word & 0xffff) as u16;
+        match Ospfv3LinkStateType(ls_type) {
+            Ospfv3LinkStateType::RouterLSA => {
+                map(Ospfv3RouterLSA::parse, Ospfv3LinkStateAdvertisement::Router)(input)
+            }
+            Ospfv3LinkStateType::NetworkLSA => map(
+                Ospfv3NetworkLSA::parse,
+                Ospfv3LinkStateAdvertisement::Network,
+            )(input),
+            Ospfv3LinkStateType::InterAreaPrefixLSA => map(
+                Ospfv3InterAreaPrefixLSA::parse,
+                Ospfv3LinkStateAdvertisement::InterAreaPrefix,
+            )(input),
+            Ospfv3LinkStateType::InterAreaRouterLSA => map(
+                Ospfv3InterAreaRouterLSA::parse,
+                Ospfv3LinkStateAdvertisement::InterAreaRouter,
+            )(input),
+            Ospfv3LinkStateType::ASExternalLSA => map(
+                Ospfv3ASExternalLSA::parse,
+                Ospfv3LinkStateAdvertisement::ASExternal,
+            )(input),
+            Ospfv3LinkStateType::NSSALSA => map(
+                Ospfv3ASExternalLSA::parse,
+                Ospfv3LinkStateAdvertisement::NSSA,
+            )(input),
+            Ospfv3LinkStateType::LinkLSA => {
+                map(Ospfv3LinkLSA::parse, Ospfv3LinkStateAdvertisement::Link)(input)
+            }
+            Ospfv3LinkStateType::IntraAreaPrefixLSA => map(
+                Ospfv3IntraAreaPrefixLSA::parse,
+                Ospfv3LinkStateAdvertisement::IntraAreaPrefix,
+            )(input),
+            _ => Err(nom::Err::Error(make_error(input, ErrorKind::Tag))),
+        }
+    }
+}
+
+pub(crate) fn parse_ospf_vec_u32(
     input: &[u8],
     packet_length: u16,
+    offset: usize,
 ) -> IResult<&[u8], Vec<u32>> {
-    if packet_length == 24 {
+    if packet_length as usize == offset {
         return Ok((input, Vec::new()));
     }
-    // 24 is the offset of the first attached router
-    if packet_length < 24 || packet_length as usize - 24 > input.len() {
+    if (packet_length as usize) < offset || packet_length as usize - offset > input.len() {
         return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
     }
-    let (data, rem) = input.split_at(packet_length as usize - 24);
+    let (data, rem) = input.split_at(packet_length as usize - offset);
     let (_, routers) = many0(be_u32_complete)(data)?;
     Ok((rem, routers))
 }
@@ -139,4 +205,19 @@ pub(crate) fn parse_ospf_tos_routes(
     let (data_routes, rem) = input.split_at(packet_length as usize - 28);
     let (_, routes) = many0(complete(OspfTosRoute::parse))(data_routes)?;
     Ok((rem, routes))
+}
+
+pub(crate) fn parse_ospfv3_router_links(
+    input: &[u8],
+    packet_length: u16,
+) -> IResult<&[u8], Vec<Ospfv3RouterLink>> {
+    if packet_length == 24 {
+        return Ok((input, Vec::new()));
+    }
+    if packet_length < 24 || packet_length as usize - 24 > input.len() {
+        return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
+    }
+    let (data, rem) = input.split_at(packet_length as usize - 24);
+    let (_, v) = many0(complete(Ospfv3RouterLink::parse))(data)?;
+    Ok((rem, v))
 }

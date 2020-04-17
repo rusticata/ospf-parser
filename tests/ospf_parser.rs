@@ -12,9 +12,9 @@ pub fn test_hello_packet() {
 00 00 00 28 c0 a8 aa 08 00 00 00 00"
     );
 
-    let (rem, res) = parse_ospf_packet(OSPF_HELLO).expect("parsing failed");
+    let (rem, res) = parse_ospfv2_packet(OSPF_HELLO).expect("parsing failed");
     assert!(rem.is_empty());
-    if let OspfPacket::Hello(pkt) = res {
+    if let Ospfv2Packet::Hello(pkt) = res {
         assert_eq!(pkt.header.version, 2);
         assert_eq!(pkt.header.packet_type, OspfPacketType::Hello);
         assert_eq!(pkt.header.source_router(), Ipv4Addr::new(192, 168, 170, 8));
@@ -34,15 +34,15 @@ pub fn test_db_description_packet() {
         "
     );
 
-    let (rem, res) = parse_ospf_packet(OSPF_DBDESC).expect("parsing failed");
+    let (rem, res) = parse_ospfv2_packet(OSPF_DBDESC).expect("parsing failed");
     assert!(rem.is_empty());
-    if let OspfPacket::DatabaseDescription(pkt) = res {
+    if let Ospfv2Packet::DatabaseDescription(pkt) = res {
         assert_eq!(pkt.header.version, 2);
         assert_eq!(pkt.header.packet_type, OspfPacketType::DatabaseDescription);
         assert_eq!(pkt.header.source_router(), Ipv4Addr::new(192, 168, 170, 8));
         assert_eq!(pkt.if_mtu, 1500);
         assert_eq!(pkt.dd_sequence_number, 0x4177_a97e);
-        assert_eq!(pkt.link_state_advertisement.len(), 0);
+        assert_eq!(pkt.lsa_headers.len(), 0);
     } else {
         panic!("wrong packet type");
     }
@@ -67,15 +67,15 @@ pub fn test_db_description_packet_with_lsa() {
         "
     );
 
-    let (rem, res) = parse_ospf_packet(OSPF_DBDESC).expect("parsing failed");
+    let (rem, res) = parse_ospfv2_packet(OSPF_DBDESC).expect("parsing failed");
     assert!(rem.is_empty());
-    if let OspfPacket::DatabaseDescription(pkt) = res {
+    if let Ospfv2Packet::DatabaseDescription(pkt) = res {
         assert_eq!(pkt.header.version, 2);
         assert_eq!(pkt.header.packet_type, OspfPacketType::DatabaseDescription);
         assert_eq!(pkt.header.source_router(), Ipv4Addr::new(192, 168, 170, 3));
         assert_eq!(pkt.if_mtu, 1500);
         assert_eq!(pkt.dd_sequence_number, 0x4177_a97e);
-        assert_eq!(pkt.link_state_advertisement.len(), 7);
+        assert_eq!(pkt.lsa_headers.len(), 7);
     } else {
         panic!("wrong packet type");
     }
@@ -92,10 +92,10 @@ pub fn test_ls_request() {
         "
     );
 
-    let (rem, res) = parse_ospf_packet(OSPF_LSREQ).expect("parsing failed");
+    let (rem, res) = parse_ospfv2_packet(OSPF_LSREQ).expect("parsing failed");
     // println!("res:{:#?}", res);
     assert!(rem.is_empty());
-    if let OspfPacket::LinkStateRequest(pkt) = res {
+    if let Ospfv2Packet::LinkStateRequest(pkt) = res {
         assert_eq!(pkt.header.version, 2);
         assert_eq!(pkt.header.packet_type, OspfPacketType::LinkStateRequest);
         assert_eq!(pkt.header.source_router(), Ipv4Addr::new(192, 168, 170, 3));
@@ -124,10 +124,10 @@ pub fn test_ls_request_multiple_lsa() {
         "
     );
 
-    let (rem, res) = parse_ospf_packet(OSPF_LSREQ_WITH_LSA).expect("parsing failed");
+    let (rem, res) = parse_ospfv2_packet(OSPF_LSREQ_WITH_LSA).expect("parsing failed");
     // println!("res:{:#?}", res);
     assert!(rem.is_empty());
-    if let OspfPacket::LinkStateRequest(pkt) = res {
+    if let Ospfv2Packet::LinkStateRequest(pkt) = res {
         assert_eq!(pkt.header.version, 2);
         assert_eq!(pkt.header.packet_type, OspfPacketType::LinkStateRequest);
         assert_eq!(pkt.header.source_router(), Ipv4Addr::new(192, 168, 170, 8));
@@ -149,10 +149,10 @@ pub fn test_ls_update() {
         "
     );
 
-    let (rem, res) = parse_ospf_packet(OSPF_LSUPD).expect("parsing failed");
+    let (rem, res) = parse_ospfv2_packet(OSPF_LSUPD).expect("parsing failed");
     // println!("res:{:#?}", res);
     assert!(rem.is_empty());
-    if let OspfPacket::LinkStateUpdate(pkt) = res {
+    if let Ospfv2Packet::LinkStateUpdate(pkt) = res {
         assert_eq!(pkt.header.version, 2);
         assert_eq!(pkt.header.packet_type, OspfPacketType::LinkStateUpdate);
         assert_eq!(pkt.header.source_router(), Ipv4Addr::new(192, 168, 170, 8));
@@ -190,10 +190,10 @@ pub fn test_ls_ack() {
         "
     );
 
-    let (rem, res) = parse_ospf_packet(OSPF_LSACK).expect("parsing failed");
+    let (rem, res) = parse_ospfv2_packet(OSPF_LSACK).expect("parsing failed");
     // println!("res:{:#?}", res);
     assert!(rem.is_empty());
-    if let OspfPacket::LinkStateAcknowledgment(pkt) = res {
+    if let Ospfv2Packet::LinkStateAcknowledgment(pkt) = res {
         assert_eq!(pkt.header.version, 2);
         assert_eq!(
             pkt.header.packet_type,
@@ -233,10 +233,10 @@ ff ff ff 00 80 00 00 14 00 00 00 00 00 00 00 00
         "
     );
 
-    let (rem, res) = parse_ospf_packet(OSPF_LSA).expect("parsing failed");
+    let (rem, res) = parse_ospfv2_packet(OSPF_LSA).expect("parsing failed");
     // println!("res:{:#?}", res);
     assert!(rem.is_empty());
-    if let OspfPacket::LinkStateUpdate(pkt) = res {
+    if let Ospfv2Packet::LinkStateUpdate(pkt) = res {
         assert_eq!(pkt.header.version, 2);
         assert_eq!(pkt.header.packet_type, OspfPacketType::LinkStateUpdate);
         assert_eq!(pkt.header.source_router(), Ipv4Addr::new(192, 168, 170, 3));
