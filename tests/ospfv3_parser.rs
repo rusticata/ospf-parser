@@ -49,7 +49,7 @@ pub fn test_v3_db_description_packet() {
 }
 
 #[test]
-pub fn test_db_description_packet_with_lsa() {
+pub fn test_v3_db_description_packet_with_lsa() {
     // packet 14 of "OSPFv3_with_AH.cap" (packetlife)
     const OSPF_V3_DBDESC: &[u8] = &hex!(
         "
@@ -186,7 +186,7 @@ e8 d2 00 2c 00 01 20 01 00 00 00 00 01 01 01 01
 
 #[test]
 pub fn test_v3_ls_ack() {
-    // packet 26 of "ospf.cap" (wireshark samples)
+    // packet 26 of "OSPFv3_with_AH.cap" (packetlife)
     const OSPF_V3_LSACK: &[u8] = &hex!(
         "
 03 05 01 14 02 02 02 02 00 00 00 01 6e 7c 00 00
