@@ -114,6 +114,18 @@ impl OspfLinkStateAdvertisement {
                 OspfNSSAExternalLinkAdvertisement::parse,
                 OspfLinkStateAdvertisement::NSSAASExternal,
             )(input),
+            OspfLinkStateType::OpaqueLinkLocalScope => map(
+                OspfOpaqueLinkAdvertisement::parse,
+                OspfLinkStateAdvertisement::OpaqueLinkLocalScope,
+            )(input),
+            OspfLinkStateType::OpaqueAreaLocalScope => map(
+                OspfOpaqueLinkAdvertisement::parse,
+                OspfLinkStateAdvertisement::OpaqueAreaLocalScope,
+            )(input),
+            OspfLinkStateType::OpaqueASWideScope => map(
+                OspfOpaqueLinkAdvertisement::parse,
+                OspfLinkStateAdvertisement::OpaqueASWideScope,
+            )(input),
             _ => Err(nom::Err::Error(make_error(input, ErrorKind::Tag))),
         }
     }

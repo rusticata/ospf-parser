@@ -228,6 +228,9 @@ impl display OspfLinkStateType {
     SummaryLinkAsbr = 4,
     ASExternalLink = 5,
     NSSAASExternal = 7,
+    OpaqueLinkLocalScope = 9,
+    OpaqueAreaLocalScope = 10,
+    OpaqueASWideScope = 11,
 }
 }
 
@@ -272,6 +275,9 @@ pub enum OspfLinkStateAdvertisement {
     SummaryLinkAsbr(OspfSummaryLinkAdvertisement),
     ASExternalLink(OspfASExternalLinkAdvertisement),
     NSSAASExternal(OspfNSSAExternalLinkAdvertisement),
+    OpaqueLinkLocalScope(OspfOpaqueLinkAdvertisement),
+    OpaqueAreaLocalScope(OspfOpaqueLinkAdvertisement),
+    OpaqueASWideScope(OspfOpaqueLinkAdvertisement),
 }
 
 /// Router links advertisements
@@ -497,5 +503,40 @@ impl OspfNSSAExternalLinkAdvertisement {
     }
     pub fn network_mask(&self) -> Ipv4Addr {
         Ipv4Addr::from(self.network_mask)
+    }
+}
+
+/// The Opaque LSA (RFC5250)
+///
+/// Opaque LSAs are Type 9, 10, and 11 link state advertisements.  These
+/// advertisements MAY be used directly by OSPF or indirectly by some
+/// application wishing to distribute information throughout the OSPF
+/// domain.  The function of the Opaque LSA option is to provide for
+/// future OSPF extensibility.
+///
+/// Opaque LSAs contain some number of octets (of application-specific
+/// data) padded to 32-bit alignment.  Like any other LSA, the Opaque LSA
+/// uses the link-state database distribution mechanism for flooding this
+/// information throughout the topology.  However, the Opaque LSA has a
+/// flooding scope associated with it so that the scope of flooding may
+/// be link-local (type-9), area-local (type-10), or the entire OSPF
+/// routing domain (type-11).  Section 3 of this document describes the
+/// flooding procedures for the Opaque LSA.
+#[derive(Debug, Nom)]
+pub struct OspfOpaqueLinkAdvertisement {
+    #[Verify(header.ls_type == OspfLinkStateType::OpaqueLinkLocalScope ||
+        header.ls_type == OspfLinkStateType::OpaqueAreaLocalScope ||
+        header.ls_type == OspfLinkStateType::OpaqueASWideScope)]
+    pub header: OspfLinkStateAdvertisementHeader,
+    pub data: Vec<u8>,
+}
+
+impl OspfOpaqueLinkAdvertisement {
+    pub fn opaque_type(&self) -> u8 {
+        (self.header.link_state_id >> 24) as u8
+    }
+
+    pub fn opaque_id(&self) -> u32 {
+        self.header.link_state_id & 0xff_ffff
     }
 }
