@@ -1,5 +1,6 @@
 use crate::ospfv2::*;
 use crate::ospfv3::*;
+use nom::bytes::streaming::take;
 use nom::combinator::{complete, map, peek};
 use nom::error::{make_error, ErrorKind};
 use nom::multi::many0;
@@ -172,6 +173,13 @@ impl Ospfv3LinkStateAdvertisement {
 }
 
 pub(crate) fn parse_ospf_vec_u32(
+    packet_length: u16,
+    offset: usize,
+) -> impl Fn(&[u8]) -> IResult<&[u8], Vec<u32>, (&[u8], ErrorKind)> {
+    move |input: &[u8]| parse_ospf_vec_u32_f(input, packet_length, offset)
+}
+
+fn parse_ospf_vec_u32_f(
     input: &[u8],
     packet_length: u16,
     offset: usize,
@@ -188,6 +196,12 @@ pub(crate) fn parse_ospf_vec_u32(
 }
 
 pub(crate) fn parse_ospf_external_tos_routes(
+    packet_length: u16,
+) -> impl Fn(&[u8]) -> IResult<&[u8], Vec<OspfExternalTosRoute>, (&[u8], ErrorKind)> {
+    move |input: &[u8]| parse_ospf_external_tos_routes_f(input, packet_length)
+}
+
+fn parse_ospf_external_tos_routes_f(
     input: &[u8],
     packet_length: u16,
 ) -> IResult<&[u8], Vec<OspfExternalTosRoute>> {
@@ -204,9 +218,12 @@ pub(crate) fn parse_ospf_external_tos_routes(
 }
 
 pub(crate) fn parse_ospf_tos_routes(
-    input: &[u8],
     packet_length: u16,
-) -> IResult<&[u8], Vec<OspfTosRoute>> {
+) -> impl Fn(&[u8]) -> IResult<&[u8], Vec<OspfTosRoute>, (&[u8], ErrorKind)> {
+    move |input: &[u8]| parse_ospf_tos_routes_f(input, packet_length)
+}
+
+fn parse_ospf_tos_routes_f(input: &[u8], packet_length: u16) -> IResult<&[u8], Vec<OspfTosRoute>> {
     if packet_length == 28 {
         return Ok((input, Vec::new()));
     }
@@ -220,6 +237,12 @@ pub(crate) fn parse_ospf_tos_routes(
 }
 
 pub(crate) fn parse_ospfv3_router_links(
+    packet_length: u16,
+) -> impl Fn(&[u8]) -> IResult<&[u8], Vec<Ospfv3RouterLink>, (&[u8], ErrorKind)> {
+    move |input: &[u8]| parse_ospfv3_router_links_f(input, packet_length)
+}
+
+fn parse_ospfv3_router_links_f(
     input: &[u8],
     packet_length: u16,
 ) -> IResult<&[u8], Vec<Ospfv3RouterLink>> {
@@ -232,4 +255,10 @@ pub(crate) fn parse_ospfv3_router_links(
     let (data, rem) = input.split_at(packet_length as usize - 24);
     let (_, v) = many0(complete(Ospfv3RouterLink::parse))(data)?;
     Ok((rem, v))
+}
+
+pub(crate) fn take_vec_u8(
+    length: u8,
+) -> impl Fn(&[u8]) -> IResult<&[u8], Vec<u8>, (&[u8], ErrorKind)> {
+    move |input: &[u8]| map(take(length), |b: &[u8]| b.to_vec())(input)
 }

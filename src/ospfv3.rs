@@ -1,7 +1,7 @@
 use crate::ospfv2::*;
-use crate::parser::{parse_ospf_vec_u32, parse_ospfv3_router_links};
-use nom::number::streaming::{be_u16, be_u24, be_u32, be_u8};
-use nom::{call, complete, cond, count, do_parse, many0, map, take, IResult};
+use crate::parser::{parse_ospf_vec_u32, parse_ospfv3_router_links, take_vec_u8};
+use nom::combinator::cond;
+use nom::number::streaming::{be_u24, be_u32};
 use nom_derive::Nom;
 use rusticata_macros::newtype_enum;
 use std::net::Ipv4Addr;
@@ -25,7 +25,7 @@ pub enum Ospfv3Packet {
 /// Section 4.2.2.
 #[derive(Debug, Nom)]
 pub struct Ospfv3PacketHeader {
-    #[Verify(version == 2)]
+    #[nom(Verify = "*version == 3")]
     pub version: u8,
     pub packet_type: OspfPacketType,
     pub packet_length: u16,
@@ -60,18 +60,18 @@ impl Ospfv3PacketHeader {
 /// recently received).
 #[derive(Debug, Nom)]
 pub struct OspfHellov3Packet {
-    #[Verify(header.packet_type == OspfPacketType::Hello)]
+    #[nom(Verify = "header.packet_type == OspfPacketType::Hello")]
     pub header: Ospfv3PacketHeader,
     pub interface_id: u32,
     pub router_priority: u8,
-    #[Parse = "be_u24"]
+    #[nom(Parse = "be_u24")]
     pub options: u32,
     pub hello_interval: u16,
     pub router_dead_interval: u16,
     pub designated_router: u32,
     pub backup_designated_router: u32,
     // limit parsing to (length-xxx) bytes
-    #[Parse = "call!(parse_ospf_vec_u32, header.packet_length, 36)"]
+    #[nom(Parse = "parse_ospf_vec_u32(header.packet_length, 36)")]
     pub neighbor_list: Vec<u32>,
 }
 
@@ -98,10 +98,10 @@ impl OspfHellov3Packet {
 /// via the packets' DD sequence numbers.
 #[derive(Debug, Nom)]
 pub struct Ospfv3DatabaseDescriptionPacket {
-    #[Verify(header.packet_type == OspfPacketType::DatabaseDescription)]
+    #[nom(Verify = "header.packet_type == OspfPacketType::DatabaseDescription")]
     pub header: Ospfv3PacketHeader,
     pub reserved0: u8,
-    #[Parse = "be_u24"]
+    #[nom(Parse = "be_u24")]
     pub options: u32,
     pub if_mtu: u16,
     pub reserved: u8,
@@ -131,7 +131,7 @@ pub struct Ospfv3DatabaseDescriptionPacket {
 /// documented in Section 10.7 of [OSPFV2].
 #[derive(Debug, Nom)]
 pub struct Ospfv3LinkStateRequestPacket {
-    #[Verify(header.packet_type == OspfPacketType::LinkStateRequest)]
+    #[nom(Verify = "header.packet_type == OspfPacketType::LinkStateRequest")]
     pub header: Ospfv3PacketHeader,
     pub requests: Vec<OspfLinkStateRequest>,
 }
@@ -152,10 +152,10 @@ pub struct Ospfv3LinkStateRequestPacket {
 /// of LSAs, consult Section 4.5.
 #[derive(Debug, Nom)]
 pub struct Ospfv3LinkStateUpdatePacket {
-    #[Verify(header.packet_type == OspfPacketType::LinkStateUpdate)]
+    #[nom(Verify = "header.packet_type == OspfPacketType::LinkStateUpdate")]
     pub header: Ospfv3PacketHeader,
     pub num_advertisements: u32,
-    #[Count = "num_advertisements"]
+    #[nom(Count = "num_advertisements")]
     pub lsa: Vec<Ospfv3LinkStateAdvertisement>,
 }
 
@@ -178,7 +178,7 @@ pub struct Ospfv3LinkStateUpdatePacket {
 /// details).
 #[derive(Debug, Nom)]
 pub struct Ospfv3LinkStateAcknowledgmentPacket {
-    #[Verify(header.packet_type == OspfPacketType::LinkStateAcknowledgment)]
+    #[nom(Verify = "header.packet_type == OspfPacketType::LinkStateAcknowledgment")]
     pub header: Ospfv3PacketHeader,
     pub lsa_headers: Vec<Ospfv3LinkStateAdvertisementHeader>,
 }
@@ -253,13 +253,13 @@ pub enum Ospfv3LinkStateAdvertisement {
 /// router links advertisements, see Section 12.4.1.
 #[derive(Debug, Nom)]
 pub struct Ospfv3RouterLSA {
-    #[Verify(header.ls_type == Ospfv3LinkStateType::RouterLSA)]
+    #[nom(Verify = "header.link_state_type == Ospfv3LinkStateType::RouterLSA")]
     pub header: Ospfv3LinkStateAdvertisementHeader,
     pub flags: u8,
-    #[Parse = "be_u24"]
+    #[nom(Parse = "be_u24")]
     pub options: u32,
     // limit parsing to (length-xxx) bytes
-    #[Parse = "call!(parse_ospfv3_router_links, header.length)"]
+    #[nom(Parse = "parse_ospfv3_router_links(header.length)")]
     pub links: Vec<Ospfv3RouterLink>,
 }
 
@@ -315,13 +315,13 @@ impl Ospfv3RouterLink {
 /// Section 4.4.3.3.
 #[derive(Debug, Nom)]
 pub struct Ospfv3NetworkLSA {
-    #[Verify(header.ls_type == Ospfv3LinkStateType::NetworkLSA)]
-    pub header: OspfLinkStateAdvertisementHeader,
+    #[nom(Verify = "header.link_state_type == Ospfv3LinkStateType::NetworkLSA")]
+    pub header: Ospfv3LinkStateAdvertisementHeader,
     pub reserved: u8,
-    #[Parse = "be_u24"]
+    #[nom(Parse = "be_u24")]
     pub options: u32,
     // limit parsing to (length-xxx) bytes
-    #[Parse = "call!(parse_ospf_vec_u32, header.length, 24)"]
+    #[nom(Parse = "parse_ospf_vec_u32(header.length, 24)")]
     pub attached_routers: Vec<u32>,
 }
 
@@ -348,10 +348,10 @@ impl Ospfv3NetworkLSA {
 /// PrefixLength is set to 0.
 #[derive(Debug, Nom)]
 pub struct Ospfv3InterAreaPrefixLSA {
-    #[Verify(header.ls_type == Ospfv3LinkStateType::InterAreaPrefixLSA)]
-    pub header: OspfLinkStateAdvertisementHeader,
+    #[nom(Verify = "header.link_state_type == Ospfv3LinkStateType::InterAreaPrefixLSA")]
+    pub header: Ospfv3LinkStateAdvertisementHeader,
     pub reserved0: u8,
-    #[Parse = "be_u24"]
+    #[nom(Parse = "be_u24")]
     pub metric: u32,
     pub prefix: Ospfv3IPv6AddressPrefix,
 }
@@ -361,7 +361,7 @@ pub struct Ospfv3IPv6AddressPrefix {
     pub prefix_length: u8,
     pub prefix_options: u8,
     pub reserved: u16,
-    #[Parse = "map!(take!(prefix_length / 8), |b| b.to_vec())"]
+    #[nom(Parse = "take_vec_u8(prefix_length / 8)")]
     pub address_prefix: Vec<u8>,
 }
 
@@ -377,13 +377,13 @@ pub struct Ospfv3IPv6AddressPrefix {
 /// see Section 4.4.3.5.
 #[derive(Debug, Nom)]
 pub struct Ospfv3InterAreaRouterLSA {
-    #[Verify(header.ls_type == Ospfv3LinkStateType::InterAreaRouterLSA)]
-    pub header: OspfLinkStateAdvertisementHeader,
+    #[nom(Verify = "header.link_state_type == Ospfv3LinkStateType::InterAreaRouterLSA")]
+    pub header: Ospfv3LinkStateAdvertisementHeader,
     pub reserved0: u8,
-    #[Parse = "be_u24"]
+    #[nom(Parse = "be_u24")]
     pub options: u32,
     pub reserved1: u8,
-    #[Parse = "be_u24"]
+    #[nom(Parse = "be_u24")]
     pub metric: u32,
     pub destination_router_id: u32,
 }
@@ -402,18 +402,20 @@ pub struct Ospfv3InterAreaRouterLSA {
 /// is set to 0.
 #[derive(Debug, Nom)]
 pub struct Ospfv3ASExternalLSA {
-    #[Verify(header.ls_type == Ospfv3LinkStateType::ASExternalLSA ||
-             header.ls_type == Ospfv3LinkStateType::NSSALSA)]
-    pub header: OspfLinkStateAdvertisementHeader,
+    #[nom(
+        Verify = "header.link_state_type == Ospfv3LinkStateType::ASExternalLSA ||
+             header.link_state_type == Ospfv3LinkStateType::NSSALSA"
+    )]
+    pub header: Ospfv3LinkStateAdvertisementHeader,
     pub flags: u8,
-    #[Parse = "be_u24"]
+    #[nom(Parse = "be_u24")]
     pub metric: u32,
     pub address_prefix: Ospfv3IPv6AddressPrefix,
-    #[Parse = "cond!(flags & 0b10 != 0, map!(take!(16), |b| b.to_vec()))"]
+    #[nom(Parse = "cond(flags & 0b10 != 0, take_vec_u8(16))")]
     pub forwarding_address: Option<Vec<u8>>,
-    #[Parse = "cond!(flags & 0b01 != 0, be_u32)"]
+    #[nom(Parse = "cond(flags & 0b01 != 0, be_u32)")]
     pub external_route_tag: Option<u32>,
-    #[Parse = "cond!(address_prefix.reserved != 0, be_u32)"]
+    #[nom(Parse = "cond(address_prefix.reserved != 0, be_u32)")]
     pub referenced_link_state_id: Option<u32>,
 }
 
@@ -456,15 +458,15 @@ type Ospfv3NSSALSA = Ospfv3ASExternalLSA;
 /// Interface ID on the link.
 #[derive(Debug, Nom)]
 pub struct Ospfv3LinkLSA {
-    #[Verify(header.ls_type == Ospfv3LinkStateType::LinkLSA)]
-    pub header: OspfLinkStateAdvertisementHeader,
+    #[nom(Verify = "header.link_state_type == Ospfv3LinkStateType::LinkLSA")]
+    pub header: Ospfv3LinkStateAdvertisementHeader,
     pub router_priority: u8,
-    #[Parse = "be_u24"]
+    #[nom(Parse = "be_u24")]
     pub options: u32,
-    #[Parse = "map!(take!(16), |b| b.to_vec())"]
+    #[nom(Parse = "take_vec_u8(16)")]
     pub link_local_interface_address: Vec<u8>,
     pub num_prefixes: u32,
-    #[Count = "num_prefixes"]
+    #[nom(Count = "num_prefixes")]
     pub address_prefixes: Vec<Ospfv3IPv6AddressPrefix>,
 }
 
@@ -486,12 +488,12 @@ pub struct Ospfv3LinkLSA {
 /// unique Link State ID.
 #[derive(Debug, Nom)]
 pub struct Ospfv3IntraAreaPrefixLSA {
-    #[Verify(header.ls_type == Ospfv3LinkStateType::IntraAreaPrefixLSA)]
-    pub header: OspfLinkStateAdvertisementHeader,
+    #[nom(Verify = "header.link_state_type == Ospfv3LinkStateType::IntraAreaPrefixLSA")]
+    pub header: Ospfv3LinkStateAdvertisementHeader,
     pub num_prefixes: u16,
     pub referenced_ls_type: u16,
     pub referenced_link_state_id: u32,
     pub referenced_advertising_router: u32,
-    #[Count = "num_prefixes"]
+    #[nom(Count = "num_prefixes")]
     pub address_prefixes: Vec<Ospfv3IPv6AddressPrefix>,
 }

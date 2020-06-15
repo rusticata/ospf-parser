@@ -1,6 +1,5 @@
 use crate::parser::{parse_ospf_external_tos_routes, parse_ospf_tos_routes, parse_ospf_vec_u32};
-use nom::number::streaming::{be_u16, be_u24, be_u32, be_u64, be_u8};
-use nom::{call, complete, count, do_parse, many0, IResult};
+use nom::number::streaming::be_u24;
 use nom_derive::Nom;
 use rusticata_macros::newtype_enum;
 use std::net::Ipv4Addr;
@@ -36,7 +35,7 @@ pub enum Ospfv2Packet {
 /// determination is described in Section 8.2 of the specification.
 #[derive(Debug, Nom)]
 pub struct Ospfv2PacketHeader {
-    #[Verify(version == 2)]
+    #[nom(Verify = "*version == 2")]
     pub version: u8,
     pub packet_type: OspfPacketType,
     pub packet_length: u16,
@@ -71,7 +70,7 @@ impl Ospfv2PacketHeader {
 /// 9.5.
 #[derive(Debug, Nom)]
 pub struct OspfHelloPacket {
-    #[Verify(header.packet_type == OspfPacketType::Hello)]
+    #[nom(Verify = "header.packet_type == OspfPacketType::Hello")]
     pub header: Ospfv2PacketHeader,
     pub network_mask: u32,
     pub hello_interval: u16,
@@ -81,7 +80,7 @@ pub struct OspfHelloPacket {
     pub designated_router: u32,
     pub backup_designated_router: u32,
     // limit parsing to (length-xxx) bytes
-    #[Parse = "call!(parse_ospf_vec_u32, header.packet_length, 44)"]
+    #[nom(Parse = "parse_ospf_vec_u32(header.packet_length, 44)")]
     pub neighbor_list: Vec<u32>,
 }
 
@@ -112,7 +111,7 @@ impl OspfHelloPacket {
 /// the packets' DD sequence numbers.
 #[derive(Debug, Nom)]
 pub struct OspfDatabaseDescriptionPacket {
-    #[Verify(header.packet_type == OspfPacketType::DatabaseDescription)]
+    #[nom(Verify = "header.packet_type == OspfPacketType::DatabaseDescription")]
     pub header: Ospfv2PacketHeader,
     pub if_mtu: u16,
     pub options: u8,
@@ -142,7 +141,7 @@ pub struct OspfDatabaseDescriptionPacket {
 /// Section 10.7.
 #[derive(Debug, Nom)]
 pub struct OspfLinkStateRequestPacket {
-    #[Verify(header.packet_type == OspfPacketType::LinkStateRequest)]
+    #[nom(Verify = "header.packet_type == OspfPacketType::LinkStateRequest")]
     pub header: Ospfv2PacketHeader,
     pub requests: Vec<OspfLinkStateRequest>,
 }
@@ -183,10 +182,10 @@ impl OspfLinkStateRequest {
 /// consult Section 13.
 #[derive(Debug, Nom)]
 pub struct OspfLinkStateUpdatePacket {
-    #[Verify(header.packet_type == OspfPacketType::LinkStateUpdate)]
+    #[nom(Verify = "header.packet_type == OspfPacketType::LinkStateUpdate")]
     pub header: Ospfv2PacketHeader,
     pub num_advertisements: u32,
-    #[Count = "num_advertisements"]
+    #[nom(Count = "num_advertisements")]
     pub lsa: Vec<OspfLinkStateAdvertisement>,
 }
 
@@ -212,7 +211,7 @@ pub struct OspfLinkStateUpdatePacket {
 /// advertisement headers.
 #[derive(Debug, Nom)]
 pub struct OspfLinkStateAcknowledgmentPacket {
-    #[Verify(header.packet_type == OspfPacketType::LinkStateAcknowledgment)]
+    #[nom(Verify = "header.packet_type == OspfPacketType::LinkStateAcknowledgment")]
     pub header: Ospfv2PacketHeader,
     pub lsa_headers: Vec<OspfLinkStateAdvertisementHeader>,
 }
@@ -291,11 +290,11 @@ pub enum OspfLinkStateAdvertisement {
 /// router links advertisements, see Section 12.4.1.
 #[derive(Debug, Nom)]
 pub struct OspfRouterLinksAdvertisement {
-    #[Verify(header.ls_type == OspfLinkStateType::RouterLinks)]
+    #[nom(Verify = "header.link_state_type == OspfLinkStateType::RouterLinks")]
     pub header: OspfLinkStateAdvertisementHeader,
     pub flags: u16,
     pub num_links: u16,
-    #[Count = "num_links"]
+    #[nom(Count = "num_links")]
     pub links: Vec<OspfRouterLink>,
 }
 
@@ -319,7 +318,7 @@ pub struct OspfRouterLink {
     pub link_type: OspfRouterLinkType,
     pub num_tos: u8,
     pub tos_0_metric: u16,
-    #[Count = "num_tos"]
+    #[nom(Count = "num_tos")]
     pub tos_list: Vec<OspfRouterTOS>,
 }
 
@@ -360,11 +359,11 @@ pub struct OspfRouterTOS {
 /// Section 12.4.2.
 #[derive(Debug, Nom)]
 pub struct OspfNetworkLinksAdvertisement {
-    #[Verify(header.ls_type == OspfLinkStateType::NetworkLinks)]
+    #[nom(Verify = "header.link_state_type == OspfLinkStateType::NetworkLinks")]
     pub header: OspfLinkStateAdvertisementHeader,
     pub network_mask: u32,
     // limit parsing to (length-xxx) bytes
-    #[Parse = "call!(parse_ospf_vec_u32, header.length, 24)"]
+    #[nom(Parse = "parse_ospf_vec_u32(header.length, 24)")]
     pub attached_routers: Vec<u32>,
 }
 
@@ -399,15 +398,17 @@ impl OspfNetworkLinksAdvertisement {
 /// and 4 link state advertisements is identical.
 #[derive(Debug, Nom)]
 pub struct OspfSummaryLinkAdvertisement {
-    #[Verify(header.ls_type == OspfLinkStateType::SummaryLinkIpNetwork ||
-        header.ls_type == OspfLinkStateType::SummaryLinkAsbr)]
+    #[nom(
+        Verify = "header.link_state_type == OspfLinkStateType::SummaryLinkIpNetwork ||
+        header.link_state_type == OspfLinkStateType::SummaryLinkAsbr"
+    )]
     pub header: OspfLinkStateAdvertisementHeader,
     pub network_mask: u32,
     pub tos: u8,
-    #[Parse = "be_u24"]
+    #[nom(Parse = "be_u24")]
     pub metric: u32,
     // limit parsing to (length-xxx) bytes
-    #[Parse = "call!(parse_ospf_tos_routes, header.length)"]
+    #[nom(Parse = "parse_ospf_tos_routes(header.length)")]
     pub tos_routes: Vec<OspfTosRoute>,
 }
 
@@ -420,7 +421,7 @@ impl OspfSummaryLinkAdvertisement {
 #[derive(Debug, Nom)]
 pub struct OspfTosRoute {
     pub tos: u8,
-    #[Parse = "be_u24"]
+    #[nom(Parse = "be_u24")]
     pub metric: u32,
 }
 
@@ -444,16 +445,16 @@ pub struct OspfTosRoute {
 /// (0.0.0.0) and the Network Mask is set to 0.0.0.0.
 #[derive(Debug, Nom)]
 pub struct OspfASExternalLinkAdvertisement {
-    #[Verify(header.ls_type == OspfLinkStateType::ASExternalLink)]
+    #[nom(Verify = "header.link_state_type == OspfLinkStateType::ASExternalLink")]
     pub header: OspfLinkStateAdvertisementHeader,
     pub network_mask: u32,
     pub external_and_reserved: u8,
-    #[Parse = "be_u24"]
+    #[nom(Parse = "be_u24")]
     pub metric: u32,
     pub forwarding_address: u32,
     pub external_route_tag: u32,
     // limit parsing to (length-xxx) bytes
-    #[Parse = "call!(parse_ospf_external_tos_routes, header.length)"]
+    #[nom(Parse = "parse_ospf_external_tos_routes(header.length)")]
     pub tos_list: Vec<OspfExternalTosRoute>,
 }
 
@@ -469,7 +470,7 @@ impl OspfASExternalLinkAdvertisement {
 #[derive(Debug, Nom)]
 pub struct OspfExternalTosRoute {
     pub tos: u8,
-    #[Parse = "be_u24"]
+    #[nom(Parse = "be_u24")]
     pub metric: u32,
     pub forwarding_address: u32,
     pub external_route_tag: u32,
@@ -484,16 +485,16 @@ impl OspfExternalTosRoute {
 /// NSSA AS-External LSA (type 7, rfc1587, rfc3101)
 #[derive(Debug, Nom)]
 pub struct OspfNSSAExternalLinkAdvertisement {
-    #[Verify(header.ls_type == OspfLinkStateType::ASExternalLink)]
+    #[nom(Verify = "header.link_state_type == OspfLinkStateType::NSSAASExternal")]
     pub header: OspfLinkStateAdvertisementHeader,
     pub network_mask: u32,
     pub external_and_tos: u8,
-    #[Parse = "be_u24"]
+    #[nom(Parse = "be_u24")]
     pub metric: u32,
     pub forwarding_address: u32,
     pub external_route_tag: u32,
     // limit parsing to (length-xxx) bytes
-    #[Parse = "call!(parse_ospf_external_tos_routes, header.length)"]
+    #[nom(Parse = "parse_ospf_external_tos_routes(header.length)")]
     pub tos_list: Vec<OspfExternalTosRoute>,
 }
 
@@ -524,9 +525,11 @@ impl OspfNSSAExternalLinkAdvertisement {
 /// flooding procedures for the Opaque LSA.
 #[derive(Debug, Nom)]
 pub struct OspfOpaqueLinkAdvertisement {
-    #[Verify(header.ls_type == OspfLinkStateType::OpaqueLinkLocalScope ||
-        header.ls_type == OspfLinkStateType::OpaqueAreaLocalScope ||
-        header.ls_type == OspfLinkStateType::OpaqueASWideScope)]
+    #[nom(
+        Verify = "header.link_state_type == OspfLinkStateType::OpaqueLinkLocalScope ||
+        header.link_state_type == OspfLinkStateType::OpaqueAreaLocalScope ||
+        header.link_state_type == OspfLinkStateType::OpaqueASWideScope"
+    )]
     pub header: OspfLinkStateAdvertisementHeader,
     pub data: Vec<u8>,
 }
