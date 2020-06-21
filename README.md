@@ -24,6 +24,11 @@ and is part of the [Rusticata](https://github.com/rusticata) project.
 
 ## Changes
 
+### 0.2.0
+
+- Add support for OSPFv2 Opaque LSA (RFC5250)
+- Upgrade to nom-derive 0.6 and fix some Verify errors
+
 ### 0.1.0
 
 - Initial release
