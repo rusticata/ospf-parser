@@ -175,7 +175,7 @@ impl Ospfv3LinkStateAdvertisement {
 pub(crate) fn parse_ospf_vec_u32(
     packet_length: u16,
     offset: usize,
-) -> impl Fn(&[u8]) -> IResult<&[u8], Vec<u32>, (&[u8], ErrorKind)> {
+) -> impl Fn(&[u8]) -> IResult<&[u8], Vec<u32>> {
     move |input: &[u8]| parse_ospf_vec_u32_f(input, packet_length, offset)
 }
 
@@ -197,7 +197,7 @@ fn parse_ospf_vec_u32_f(
 
 pub(crate) fn parse_ospf_external_tos_routes(
     packet_length: u16,
-) -> impl Fn(&[u8]) -> IResult<&[u8], Vec<OspfExternalTosRoute>, (&[u8], ErrorKind)> {
+) -> impl Fn(&[u8]) -> IResult<&[u8], Vec<OspfExternalTosRoute>> {
     move |input: &[u8]| parse_ospf_external_tos_routes_f(input, packet_length)
 }
 
@@ -219,7 +219,7 @@ fn parse_ospf_external_tos_routes_f(
 
 pub(crate) fn parse_ospf_tos_routes(
     packet_length: u16,
-) -> impl Fn(&[u8]) -> IResult<&[u8], Vec<OspfTosRoute>, (&[u8], ErrorKind)> {
+) -> impl Fn(&[u8]) -> IResult<&[u8], Vec<OspfTosRoute>> {
     move |input: &[u8]| parse_ospf_tos_routes_f(input, packet_length)
 }
 
@@ -238,7 +238,7 @@ fn parse_ospf_tos_routes_f(input: &[u8], packet_length: u16) -> IResult<&[u8], V
 
 pub(crate) fn parse_ospfv3_router_links(
     packet_length: u16,
-) -> impl Fn(&[u8]) -> IResult<&[u8], Vec<Ospfv3RouterLink>, (&[u8], ErrorKind)> {
+) -> impl Fn(&[u8]) -> IResult<&[u8], Vec<Ospfv3RouterLink>> {
     move |input: &[u8]| parse_ospfv3_router_links_f(input, packet_length)
 }
 
@@ -257,8 +257,6 @@ fn parse_ospfv3_router_links_f(
     Ok((rem, v))
 }
 
-pub(crate) fn take_vec_u8(
-    length: u8,
-) -> impl Fn(&[u8]) -> IResult<&[u8], Vec<u8>, (&[u8], ErrorKind)> {
+pub(crate) fn take_vec_u8(length: u8) -> impl Fn(&[u8]) -> IResult<&[u8], Vec<u8>> {
     move |input: &[u8]| map(take(length), |b: &[u8]| b.to_vec())(input)
 }
