@@ -15,6 +15,7 @@
         unstable_features,
         unused_import_braces, unused_qualifications)]
 #![forbid(unsafe_code)]
+#![allow(clippy::upper_case_acronyms)]
 
 pub extern crate nom;
 
