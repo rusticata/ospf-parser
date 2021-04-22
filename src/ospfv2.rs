@@ -1,6 +1,6 @@
 use crate::parser::{parse_ospf_external_tos_routes, parse_ospf_tos_routes, parse_ospf_vec_u32};
 use nom::number::streaming::be_u24;
-use nom_derive::Nom;
+use nom_derive::*;
 use rusticata_macros::newtype_enum;
 use std::net::Ipv4Addr;
 

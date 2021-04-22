@@ -2,7 +2,7 @@ use crate::ospfv2::*;
 use crate::parser::{parse_ospf_vec_u32, parse_ospfv3_router_links, take_vec_u8};
 use nom::combinator::cond;
 use nom::number::streaming::{be_u24, be_u32};
-use nom_derive::Nom;
+use nom_derive::*;
 use rusticata_macros::newtype_enum;
 use std::net::Ipv4Addr;
 
