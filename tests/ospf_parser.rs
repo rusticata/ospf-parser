@@ -1,4 +1,5 @@
 use hex_literal::hex;
+use nom_derive::Parse;
 use ospf_parser::*;
 use std::net::Ipv4Addr;
 

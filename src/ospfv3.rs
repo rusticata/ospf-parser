@@ -23,7 +23,7 @@ pub enum Ospfv3Packet {
 /// information necessary to determine whether the packet should be
 /// accepted for further processing.  This determination is described in
 /// Section 4.2.2.
-#[derive(Debug, Nom)]
+#[derive(Debug, NomBE)]
 pub struct Ospfv3PacketHeader {
     #[nom(Verify = "*version == 3")]
     pub version: u8,
@@ -58,7 +58,7 @@ impl Ospfv3PacketHeader {
 /// Backup Designated Router ID), and fields used to detect bidirectional
 /// communication (the Router IDs of all neighbors whose Hellos have been
 /// recently received).
-#[derive(Debug, Nom)]
+#[derive(Debug, NomBE)]
 pub struct OspfHellov3Packet {
     #[nom(Verify = "header.packet_type == OspfPacketType::Hello")]
     pub header: Ospfv3PacketHeader,
@@ -96,7 +96,7 @@ impl OspfHellov3Packet {
 /// packets (polls) that are acknowledged by Database Description packets
 /// sent by the slave (responses).  The responses are linked to the polls
 /// via the packets' DD sequence numbers.
-#[derive(Debug, Nom)]
+#[derive(Debug, NomBE)]
 pub struct Ospfv3DatabaseDescriptionPacket {
     #[nom(Verify = "header.packet_type == OspfPacketType::DatabaseDescription")]
     pub header: Ospfv3PacketHeader,
@@ -129,7 +129,7 @@ pub struct Ospfv3DatabaseDescriptionPacket {
 /// The sending of Link State Request packets is documented in Section
 /// 10.9 of [OSPFV2].  The reception of Link State Request packets is
 /// documented in Section 10.7 of [OSPFV2].
-#[derive(Debug, Nom)]
+#[derive(Debug, NomBE)]
 pub struct Ospfv3LinkStateRequestPacket {
     #[nom(Verify = "header.packet_type == OspfPacketType::LinkStateRequest")]
     pub header: Ospfv3PacketHeader,
@@ -150,7 +150,7 @@ pub struct Ospfv3LinkStateRequestPacket {
 /// necessary, the retransmitted LSAs are always carried by unicast Link
 /// State Update packets.  For more information on the reliable flooding
 /// of LSAs, consult Section 4.5.
-#[derive(Debug, Nom)]
+#[derive(Debug, NomBE)]
 pub struct Ospfv3LinkStateUpdatePacket {
     #[nom(Verify = "header.packet_type == OspfPacketType::LinkStateUpdate")]
     pub header: Ospfv3PacketHeader,
@@ -176,14 +176,14 @@ pub struct Ospfv3LinkStateUpdatePacket {
 /// address AllSPFRouters, the multicast address AllDRouters, or to a
 /// neighbor's unicast address (see Section 13.5 of [OSPFV2] for
 /// details).
-#[derive(Debug, Nom)]
+#[derive(Debug, NomBE)]
 pub struct Ospfv3LinkStateAcknowledgmentPacket {
     #[nom(Verify = "header.packet_type == OspfPacketType::LinkStateAcknowledgment")]
     pub header: Ospfv3PacketHeader,
     pub lsa_headers: Vec<Ospfv3LinkStateAdvertisementHeader>,
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Nom)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, NomBE)]
 pub struct Ospfv3LinkStateType(pub u16);
 
 newtype_enum! {
@@ -208,7 +208,7 @@ impl display Ospfv3LinkStateType {
 /// determine which instance is more recent.  This is accomplished by
 /// examining the LS age, LS sequence number, and LS checksum fields that
 /// are also contained in the LSA header.
-#[derive(Debug, Nom)]
+#[derive(Debug, NomBE)]
 pub struct Ospfv3LinkStateAdvertisementHeader {
     pub ls_age: u16,
     pub link_state_type: Ospfv3LinkStateType,
@@ -251,7 +251,7 @@ pub enum Ospfv3LinkStateAdvertisement {
 /// router's links to the area must be described in a single router
 /// links advertisement.  For details concerning the construction of
 /// router links advertisements, see Section 12.4.1.
-#[derive(Debug, Nom)]
+#[derive(Debug, NomBE)]
 pub struct Ospfv3RouterLSA {
     #[nom(Verify = "header.link_state_type == Ospfv3LinkStateType::RouterLSA")]
     pub header: Ospfv3LinkStateAdvertisementHeader,
@@ -263,7 +263,7 @@ pub struct Ospfv3RouterLSA {
     pub links: Vec<Ospfv3RouterLink>,
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Nom)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, NomBE)]
 pub struct Ospfv3RouterLinkType(pub u8);
 
 newtype_enum! {
@@ -275,7 +275,7 @@ impl display Ospfv3RouterLinkType {
 }
 
 /// OSPF router link (i.e., interface)
-#[derive(Debug, Nom)]
+#[derive(Debug, NomBE)]
 pub struct Ospfv3RouterLink {
     pub link_type: Ospfv3RouterLinkType,
     pub reserved: u8,
@@ -313,7 +313,7 @@ impl Ospfv3RouterLink {
 /// is why the Metric fields need not be specified in the network-LSA.
 /// For details concerning the construction of network-LSAs, see
 /// Section 4.4.3.3.
-#[derive(Debug, Nom)]
+#[derive(Debug, NomBE)]
 pub struct Ospfv3NetworkLSA {
     #[nom(Verify = "header.link_state_type == Ospfv3LinkStateType::NetworkLSA")]
     pub header: Ospfv3LinkStateAdvertisementHeader,
@@ -346,7 +346,7 @@ impl Ospfv3NetworkLSA {
 /// areas instead of flooding a complete set of external routes.  When
 /// describing a default summary route, the inter-area-prefix-LSA's
 /// PrefixLength is set to 0.
-#[derive(Debug, Nom)]
+#[derive(Debug, NomBE)]
 pub struct Ospfv3InterAreaPrefixLSA {
     #[nom(Verify = "header.link_state_type == Ospfv3LinkStateType::InterAreaPrefixLSA")]
     pub header: Ospfv3LinkStateAdvertisementHeader,
@@ -356,7 +356,7 @@ pub struct Ospfv3InterAreaPrefixLSA {
     pub prefix: Ospfv3IPv6AddressPrefix,
 }
 
-#[derive(Debug, Nom)]
+#[derive(Debug, NomBE)]
 pub struct Ospfv3IPv6AddressPrefix {
     pub prefix_length: u8,
     pub prefix_options: u8,
@@ -375,7 +375,7 @@ pub struct Ospfv3IPv6AddressPrefix {
 /// 16.4 in [OSPFV2].  Each LSA describes a route to a single router.
 /// For details concerning the construction of inter-area-router-LSAs,
 /// see Section 4.4.3.5.
-#[derive(Debug, Nom)]
+#[derive(Debug, NomBE)]
 pub struct Ospfv3InterAreaRouterLSA {
     #[nom(Verify = "header.link_state_type == Ospfv3LinkStateType::InterAreaRouterLSA")]
     pub header: Ospfv3LinkStateAdvertisementHeader,
@@ -400,7 +400,7 @@ pub struct Ospfv3InterAreaRouterLSA {
 /// routes are used when no specific route exists to the destination.
 /// When describing a default route, the AS-external-LSA's PrefixLength
 /// is set to 0.
-#[derive(Debug, Nom)]
+#[derive(Debug, NomBE)]
 pub struct Ospfv3ASExternalLSA {
     #[nom(
         Verify = "header.link_state_type == Ospfv3LinkStateType::ASExternalLSA ||
@@ -456,7 +456,7 @@ type Ospfv3NSSALSA = Ospfv3ASExternalLSA;
 ///
 /// A link-LSA's Link State ID is set equal to the originating router's
 /// Interface ID on the link.
-#[derive(Debug, Nom)]
+#[derive(Debug, NomBE)]
 pub struct Ospfv3LinkLSA {
     #[nom(Verify = "header.link_state_type == Ospfv3LinkStateType::LinkLSA")]
     pub header: Ospfv3LinkStateAdvertisementHeader,
@@ -486,7 +486,7 @@ pub struct Ospfv3LinkLSA {
 /// A router can originate multiple intra-area-prefix-LSAs for each
 /// router or transit network.  Each such LSA is distinguished by its
 /// unique Link State ID.
-#[derive(Debug, Nom)]
+#[derive(Debug, NomBE)]
 pub struct Ospfv3IntraAreaPrefixLSA {
     #[nom(Verify = "header.link_state_type == Ospfv3LinkStateType::IntraAreaPrefixLSA")]
     pub header: Ospfv3LinkStateAdvertisementHeader,

@@ -7,6 +7,7 @@ use nom::multi::many0;
 use nom::number::complete::be_u32 as be_u32_complete;
 use nom::number::streaming::{be_u16, be_u32};
 pub use nom::IResult;
+use nom_derive::Parse;
 
 pub fn parse_ospfv2_packet(input: &[u8]) -> IResult<&[u8], Ospfv2Packet> {
     let (_, word) = peek(be_u16)(input)?;
@@ -86,8 +87,8 @@ pub fn parse_ospfv2_link_state_request_packet(
     OspfLinkStateRequestPacket::parse(input)
 }
 
-impl OspfLinkStateAdvertisement {
-    pub fn parse(input: &[u8]) -> IResult<&[u8], OspfLinkStateAdvertisement> {
+impl<'a> Parse<&'a [u8]> for OspfLinkStateAdvertisement {
+    fn parse(input: &[u8]) -> IResult<&[u8], OspfLinkStateAdvertisement> {
         let (_, word) = peek(be_u32)(input)?;
         let ls_type = (word & 0xff) as u8;
         match OspfLinkStateType(ls_type) {
@@ -132,8 +133,8 @@ impl OspfLinkStateAdvertisement {
     }
 }
 
-impl Ospfv3LinkStateAdvertisement {
-    pub fn parse(input: &[u8]) -> IResult<&[u8], Ospfv3LinkStateAdvertisement> {
+impl<'a> Parse<&'a [u8]> for Ospfv3LinkStateAdvertisement {
+    fn parse(input: &[u8]) -> IResult<&[u8], Ospfv3LinkStateAdvertisement> {
         let (_, word) = peek(be_u32)(input)?;
         let ls_type = (word & 0xffff) as u16;
         match Ospfv3LinkStateType(ls_type) {
