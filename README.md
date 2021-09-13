@@ -24,6 +24,10 @@ and is part of the [Rusticata](https://github.com/rusticata) project.
 
 ## Changes
 
+### 0.5.0
+
+- Update to nom-derive 0.10 / nom 7
+
 ### 0.3.0
 
 - Update to nom-derive 0.7 / nom 6
